@@ -73,3 +73,13 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# React Native Bundles and Generated Assets
+android/app/src/main/assets/index.android.bundle
+android/app/src/main/res/raw/*
+android/app/src/main/res/drawable-*/ic_launcher.png  # Generated icons if any
+android/app/build/outputs/apk/**/*.apk  # Built APKs (optional, to avoid large files)
+
+# Generated Android resources (from bundle)
+android/app/src/main/res/drawable-*/
+android/app/src/main/res/mipmap-*/
