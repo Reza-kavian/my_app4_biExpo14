@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 function App(): React.JSX.Element {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Hello React Native!</Text>
+      <Text style={styles.text}>Hello React Native 003!</Text>
     </View>
   );
 }
@@ -12,14 +12,14 @@ function App(): React.JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#0ad14cff',
     alignItems: 'center',
     justifyContent: 'center',
   },
   text: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#000',
+    color: 'red',
   },
 });
 
