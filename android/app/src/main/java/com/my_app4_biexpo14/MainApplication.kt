@@ -6,7 +6,6 @@ import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
-import com.swmansion.reanimated.ReanimatedJSIModulePackage
 
 class MainApplication : Application(), ReactApplication {
   override val reactHost: ReactHost by lazy {
@@ -16,10 +15,10 @@ class MainApplication : Application(), ReactApplication {
         PackageList(this).packages.apply {
           // Packages that cannot be autolinked yet can be added manually here, for example:
           // add(MyReactNativePackage())
-          add(ReanimatedJSIModulePackage())
         },
     )
   }
+
   override fun onCreate() {
     super.onCreate()
     loadReactNative(this)

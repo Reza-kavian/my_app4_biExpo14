@@ -1,57 +1,56 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Button, Modal, StyleSheet, Alert } from 'react-native';
+import React, { useState, useEffect } from "react";
+import { View, Text, Button, Modal, StyleSheet, Alert } from "react-native";
 import {
   Camera,
   useCameraDevices,
-  useFrameProcessor,
-  CameraDevice,
-} from 'react-native-vision-camera';
-import { runOnJS } from 'react-native-reanimated';
-import {
-  scanBarcodes,
-  BarcodeFormat,
-} from '@mgcrea/vision-camera-barcode-scanner';
+  useCodeScanner,
+  getCameraDevice,
+  type CodeScanner,
+} from "react-native-vision-camera";
 
 const ScannerScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
   const [barcodeValue, setBarcodeValue] = useState<string | null>(null);
+  const [isScanning, setIsScanning] = useState(true);
 
   // گرفتن دستگاه‌های دوربین
-  const devices = useCameraDevices() as unknown as {
-    back?: CameraDevice;
-    front?: CameraDevice;
-  };
-  const device = devices.back;
+  const devices = useCameraDevices();
+  const device = getCameraDevice(devices, 'back');
 
   // درخواست دسترسی دوربین
   useEffect(() => {
     const requestPermission = async () => {
-      const status = await Camera.requestCameraPermission();
-      setHasPermission(status === 'authorized');
+      try {
+        const status = await Camera.requestCameraPermission();
+        Alert.alert('Permission status:', status); // debug: بعد از تست حذف کن
+        setHasPermission(status === 'authorized' || status === 'granted');
+        if (status !== 'authorized' && status !== 'granted') {
+          Alert.alert('دسترسی رد شد', 'لطفاً دسترسی دوربین را از تنظیمات اپ فعال کنید.');
+        }
+      } catch (error) {
+        console.error('Permission request error:', error);
+        setHasPermission(false);
+      }
     };
     requestPermission();
   }, []);
 
-  // Frame processor برای شناسایی بارکد
-  const frameProcessor = useFrameProcessor(frame => {
-    'worklet';
-    const barcodes = scanBarcodes(frame, [BarcodeFormat.ALL_FORMATS]);
-    if (barcodes.length > 0) {
-      runOnJS(handleBarcodeDetected)(barcodes[0].displayValue ?? '');
-    }
-  }, []);
-
-  const handleBarcodeDetected = (value: string) => {
-    if (!barcodeValue) {
-      setBarcodeValue(value);
-      Alert.alert('بارکد شناسایی شد', `متن بارکد: ${value}`);
-      // اگر بخوای modal رو ببندی، این خط رو uncomment کن:
-      // setModalVisible(false);
-    }
-  };
+  // Code Scanner hook (فیکس: pdf417 حذف شد، فرمت‌های ساپورت‌شده)
+  const codeScanner: CodeScanner = useCodeScanner({
+    codeTypes: ['qr', 'ean-13', 'ean-8', 'code-128'],  // pdf417 حذف شد – این‌ها روی Android/iOS کار می‌کنن
+    onCodeScanned: (codes) => {
+      if (codes.length > 0 && !barcodeValue) {
+        const value = codes[0].value;
+        setBarcodeValue(value);
+        setIsScanning(false);
+        Alert.alert("بارکد شناسایی شد", `متن بارکد: ${value}`);
+      }
+    },
+  });
 
   // بررسی وجود دوربین و دسترسی
+  if (devices === null) return <Text>در حال بارگذاری دوربین...</Text>;
   if (!device) return <Text>دوربین پیدا نشد</Text>;
   if (!hasPermission) return <Text>نیاز به دسترسی دوربین دارید</Text>;
 
@@ -60,7 +59,8 @@ const ScannerScreen = () => {
       <Button
         title="باز کردن بارکدخوان"
         onPress={() => {
-          setBarcodeValue(null); // ریست کردن مقدار قبلی
+          setBarcodeValue(null);
+          setIsScanning(true);
           setModalVisible(true);
         }}
       />
@@ -75,13 +75,20 @@ const ScannerScreen = () => {
             style={StyleSheet.absoluteFill}
             device={device}
             isActive={modalVisible}
-            frameProcessor={frameProcessor}
+            frameProcessorFps={5}
+            codeScanner={isScanning ? codeScanner : undefined}
           />
           <View style={styles.overlay}>
             <Text style={styles.text}>
               دوربین فعال است، بارکد را جلوی دوربین ببرید
             </Text>
-            <Button title="بستن" onPress={() => setModalVisible(false)} />
+            <Button
+              title="بستن"
+              onPress={() => {
+                setModalVisible(false);
+                setIsScanning(true);
+              }}
+            />
           </View>
         </View>
       </Modal>
@@ -94,21 +101,21 @@ export default ScannerScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'black',
+    backgroundColor: "black",
   },
   overlay: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 50,
-    width: '100%',
-    alignItems: 'center',
+    width: "100%",
+    alignItems: "center",
   },
   text: {
-    color: 'white',
+    color: "white",
     fontSize: 18,
     marginBottom: 20,
   },

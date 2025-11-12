@@ -1,0 +1,13 @@
+diff --git a/node_modules/react-native-reanimated/android/build.gradle b/node_modules/react-native-reanimated/android/build.gradle
+index cf9bd1a..cd8d4b8 100644
+--- a/node_modules/react-native-reanimated/android/build.gradle
++++ b/node_modules/react-native-reanimated/android/build.gradle
+@@ -142,7 +142,7 @@ buildscript {
+         mavenCentral()
+     }
+     dependencies {
+-        classpath "com.android.tools.build:gradle:8.2.1"
++        classpath "com.android.tools.build:gradle:8.7.2"
+         classpath "de.undercouch:gradle-download-task:5.6.0"
+         classpath "com.diffplug.spotless:spotless-plugin-gradle:6.25.0"
+     }

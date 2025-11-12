@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 function HomeScreen(): React.JSX.Element {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Hello React Native 004!</Text>
+      <Text style={styles.text}>Hello React Native 003!</Text>
     </View>
   );
 }
@@ -12,7 +12,7 @@ function HomeScreen(): React.JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#c5c7d3ff',
+    backgroundColor: '#0ad14cff',
     alignItems: 'center',
     justifyContent: 'center',
   },
