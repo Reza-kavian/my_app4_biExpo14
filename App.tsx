@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react';   //okk
 import { View, Button } from 'react-native';
 import HomeScreen from './HomeScreen';
 import ScannerScreen from './ScannerScreen';

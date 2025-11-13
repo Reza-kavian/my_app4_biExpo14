@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react';   //okk
 import { StyleSheet, Text, View } from 'react-native';
 
 function HomeScreen(): React.JSX.Element {

@@ -6,6 +6,7 @@ import {
   useCodeScanner,
   getCameraDevice,
   type CodeScanner,
+  BarcodeFormat,
 } from "react-native-vision-camera";
 
 const ScannerScreen = () => {
@@ -23,11 +24,7 @@ const ScannerScreen = () => {
     const requestPermission = async () => {
       try {
         const status = await Camera.requestCameraPermission();
-        Alert.alert('Permission status:', status); // debug: بعد از تست حذف کن
         setHasPermission(status === 'authorized' || status === 'granted');
-        if (status !== 'authorized' && status !== 'granted') {
-          Alert.alert('دسترسی رد شد', 'لطفاً دسترسی دوربین را از تنظیمات اپ فعال کنید.');
-        }
       } catch (error) {
         console.error('Permission request error:', error);
         setHasPermission(false);
@@ -36,15 +33,38 @@ const ScannerScreen = () => {
     requestPermission();
   }, []);
 
-  // Code Scanner hook (فیکس: pdf417 حذف شد، فرمت‌های ساپورت‌شده)
+  // Code Scanner hook (safe check برای codes[0])
   const codeScanner: CodeScanner = useCodeScanner({
-    codeTypes: ['qr', 'ean-13', 'ean-8', 'code-128'],  // pdf417 حذف شد – این‌ها روی Android/iOS کار می‌کنن
+    codeTypes: [
+      BarcodeFormat.QR_CODE,
+      BarcodeFormat.EAN_13,
+      BarcodeFormat.EAN_8,
+      BarcodeFormat.CODE_128,
+      BarcodeFormat.CODE_39,
+      BarcodeFormat.CODE_93,
+      BarcodeFormat.CODABAR,
+      BarcodeFormat.ITF,
+      BarcodeFormat.UPC_E,
+      BarcodeFormat.PDF_417,
+      BarcodeFormat.AZTEC,
+      BarcodeFormat.DATA_MATRIX,
+    ],
     onCodeScanned: (codes) => {
-      if (codes.length > 0 && !barcodeValue) {
-        const value = codes[0].value;
-        setBarcodeValue(value);
-        setIsScanning(false);
-        Alert.alert("بارکد شناسایی شد", `متن بارکد: ${value}`);
+      console.log('Detected codes length:', codes.length); // debug
+      Alert.alert('Debug Detection', `تعداد codes: ${codes.length}`); // موقت – بعد حذف کن
+
+      if (codes.length > 0) {
+        const code = codes[0]; // safe access
+        if (code && code.value) { // check undefined
+          const value = code.value;
+          const type = code.type; // type مثل QR_CODE
+          console.log('Detected value:', value, 'Type:', type); // debug
+          setBarcodeValue(value);
+          setIsScanning(false);
+          Alert.alert("بارکد شناسایی شد", `متن: ${value} (نوع: ${type})`);
+        } else {
+          Alert.alert('Debug', 'Code object undefined or no value');
+        }
       }
     },
   });
@@ -75,12 +95,12 @@ const ScannerScreen = () => {
             style={StyleSheet.absoluteFill}
             device={device}
             isActive={modalVisible}
-            frameProcessorFps={5}
+            frameProcessorFps={15}
             codeScanner={isScanning ? codeScanner : undefined}
           />
           <View style={styles.overlay}>
             <Text style={styles.text}>
-              دوربین فعال است، بارکد را جلوی دوربین ببرید
+              دوربین فعال است، بارکد را جلوی دوربین ببرید (QR/EAN تست کن، ۱۰ ثانیه صبر کن)
             </Text>
             <Button
               title="بستن"
