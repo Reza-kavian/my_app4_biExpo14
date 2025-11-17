@@ -1,0 +1,1 @@
+my-app is an @react-native-community/cli reactnative app that created for abale for use react-native-vision-camera package, thet expo dont support it!
