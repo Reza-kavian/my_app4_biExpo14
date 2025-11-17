@@ -10,7 +10,8 @@ def enableProguardInReleaseBuilds = false
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
 android {
-    ndkVersion rootProject.ext.ndkVersion
+    // مشخص کردن NDK صریح
+    ndkVersion "26.3.11579264"
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
     namespace "com.my_app4_biexpo14"
@@ -26,7 +27,7 @@ android {
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
-            storePassword 'android'
+            storePassword 'androiddebugkey'
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
@@ -42,19 +43,28 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
 }
 
 dependencies {
     implementation("com.facebook.react:react-android")
+    
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
     }
 
-    implementation project(':react-native-reanimated')
-    implementation project(':react-native-worklets')
+    implementation project(':react-native-reanimated') 
 
     // ML Kit barcode scanning
     implementation 'com.google.mlkit:barcode-scanning:17.2.0'
+
+    // اضافه کردن worklets-core و worklets
+    implementation project(':react-native-worklets-core')
+    implementation project(':react-native-worklets')
 }
