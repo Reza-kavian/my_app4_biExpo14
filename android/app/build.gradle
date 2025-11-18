@@ -10,8 +10,7 @@ def enableProguardInReleaseBuilds = false
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
 android {
-    // مشخص کردن NDK صریح
-    ndkVersion "26.3.11579264"
+    // خط ndkVersion حذف شد تا از تنظیمات ریشه (rootProject.ext.ndkVersion) پیروی کند.
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
     namespace "com.my_app4_biexpo14"
