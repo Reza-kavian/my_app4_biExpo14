@@ -8,10 +8,9 @@ react {
 
 def enableProguardInReleaseBuilds = false
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+def isNewArchitectureEnabled = rootProject.hasProperty("newArchEnabled") && rootProject.getProperty("newArchEnabled").toBoolean()
 
 android {
-    // خط ndkVersion حذف شد تا از تنظیمات ریشه (rootProject.ext.ndkVersion) پیروی کند.
-    buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
     namespace "com.my_app4_biexpo14"
 
@@ -21,6 +20,22 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+
+        // ** 👈 گام ۱: این بلوک را اضافه کنید تا معماری‌های مورد نیاز مشخص شود **
+        ndk {
+            abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+        }
+
+        // 🎯 تغییر اصلی: پیکربندی CMake باید درون defaultConfig انجام شود
+        externalNativeBuild {
+            cmake {
+                // این متد (arguments) اکنون در اینجا قابل دسترسی است
+                arguments "-DANDROID_TOOLCHAIN=clang",
+                          "-DANDROID_STL=c++_shared",
+                          "-DHERMES_ENABLE_DEBUGGER=TRUE",
+                          "-DHERMES_ENABLE_BYTECODE_STRIPPING=FALSE"
+            }
+        }
     }
 
     signingConfigs {
@@ -50,20 +65,20 @@ android {
 }
 
 dependencies {
+    // ... سایر وابستگی‌ها بدون تغییر باقی می‌مانند
     implementation("com.facebook.react:react-android")
-    
+
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
     }
 
+    // وابستگی‌های مورد نیاز Vision Camera و انیمیشن‌ها
     implementation project(':react-native-reanimated') 
-
-    // ML Kit barcode scanning
-    implementation 'com.google.mlkit:barcode-scanning:17.2.0'
-
-    // اضافه کردن worklets-core و worklets
     implementation project(':react-native-worklets-core')
     implementation project(':react-native-worklets')
+
+    // ✅ موتور اصلی بارکدخوان برای Vision Camera V4 (حیاتی)
+    implementation 'com.google.mlkit:barcode-scanning:17.2.0'
 }
