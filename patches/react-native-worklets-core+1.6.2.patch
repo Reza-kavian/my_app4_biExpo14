@@ -1,0 +1,165 @@
+diff --git a/node_modules/react-native-worklets-core/android/CMakeLists.txt b/node_modules/react-native-worklets-core/android/CMakeLists.txt
+index cc4cbfe..722c4cb 100644
+--- a/node_modules/react-native-worklets-core/android/CMakeLists.txt
++++ b/node_modules/react-native-worklets-core/android/CMakeLists.txt
+@@ -1,116 +1,61 @@
+-project("rnworklets")
+-cmake_minimum_required(VERSION 3.8)
++cmake_minimum_required(VERSION 3.18)
++project(WorkletsCore)
+ 
+-set(CMAKE_VERBOSE_MAKEFILE ON)
+-set(CMAKE_CXX_STANDARD 17)
++set(MODULE_NAME worklets-core)
++set(WORKLETS_CORE_DIR "${PROJECT_SOURCE_DIR}/..")
+ 
+-if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+-  string(APPEND CMAKE_CXX_FLAGS " -DDEBUG")
+-endif()
+-
+-set(PACKAGE_NAME "rnworklets")
+-
+-
+-# Pre-set Folly flags from React Native core
+-include("${REACT_NATIVE_DIR}/ReactAndroid/cmake-utils/folly-flags.cmake")
+-add_compile_options(${folly_FLAGS})
++# ----------------------------------------------------
++# FIX: Minimalist linkage for compatibility (RN Classic / Expo Custom Builds)
++# This avoids relying on the missing 'cmake-utils' files and manually sets paths.
++# ----------------------------------------------------
+ 
+-# Consume shared libraries and headers from prefabs
+-find_package(fbjni REQUIRED CONFIG)
+-find_package(ReactAndroid REQUIRED CONFIG)
++# Find the main JSI library (Hermes or JSC)
++find_library(JSI_LIBRARY jsi)
++if(NOT JSI_LIBRARY)
++    message(FATAL_ERROR "Could not find jsi library. Is Hermes/JSC enabled?")
++endif()
+ 
+-file(GLOB_RECURSE SOURCES_COMMON CONFIGURE_DEPENDS "../cpp/**.cpp")
++# Define the source files
++file(GLOB_RECURSE WORKLETS_CORE_SRCS "${WORKLETS_CORE_DIR}/cpp/*.cpp")
++file(GLOB_RECURSE WORKLETS_CORE_HDRS "${WORKLETS_CORE_DIR}/cpp/*.h")
+ 
+ add_library(
+-  ${PACKAGE_NAME}
++  ${MODULE_NAME}
+   SHARED
+-  ${SOURCES_COMMON}
+-  cpp-adapter.cpp
++  ${WORKLETS_CORE_SRCS}
++  ${WORKLETS_CORE_HDRS}
+ )
+ 
+-# includes
+-target_include_directories(
+-  ${PACKAGE_NAME}
+-  PRIVATE
+-  ../cpp
+-  ../cpp/base
+-  ../cpp/decorators
+-  ../cpp/dispatch
+-  ../cpp/sharedvalues
+-  ../cpp/wrappers
+-  "${REACT_NATIVE_DIR}/ReactAndroid/src/main/jni/react/turbomodule"
+-  "${REACT_NATIVE_DIR}/ReactCommon"
+-  "${REACT_NATIVE_DIR}/ReactCommon/callinvoker"
+-  "${REACT_NATIVE_DIR}/ReactCommon/runtimeexecutor"
++# Add include directories to find JSI and React Common headers
++# These paths are typical for the classic React Native architecture.
++target_include_directories(${MODULE_NAME} PUBLIC
++    "${REACT_NATIVE_DIR}/ReactCommon"
++    "${REACT_NATIVE_DIR}/ReactCommon/jsi"
++    "${REACT_NATIVE_DIR}/ReactAndroid/src/main/jni/react/common"
++    "${WORKLETS_CORE_DIR}/cpp"
+ )
+ 
+-# build shared lib
+-set_target_properties(${PACKAGE_NAME} PROPERTIES LINKER_LANGUAGE CXX)
+-
++# Set up link libraries
+ target_link_libraries(
+-  ${PACKAGE_NAME}
++  ${MODULE_NAME}
++  PUBLIC
++  ${JSI_LIBRARY} # Link against JSI library found above
++  c++_shared
+   log
+-  android
+-)
+-
+-target_link_libraries(
+-  ${PACKAGE_NAME}
+-  ReactAndroid::jsi
+-  fbjni::fbjni
+ )
+ 
+-if(ReactAndroid_VERSION_MINOR GREATER_EQUAL 76)
+-  target_link_libraries(
+-    ${PACKAGE_NAME}
+-    ReactAndroid::reactnative             # <-- RN: Native Modules umbrella prefab
+-  )
+-else()
+-  target_link_libraries(
+-    ${PACKAGE_NAME}
+-    ReactAndroid::reactnativejni           # <-- RN: React Native JNI bindings
+-    ReactAndroid::folly_runtime
+-    ReactAndroid::glog
+-  )
++# Optional: Link against the `react-native-worklets` package if it's installed
++if (TARGET react-native-worklets)
++  target_link_libraries(${MODULE_NAME} PRIVATE react-native-worklets)
+ endif()
+ 
+-# Add the appropriate JS runtime
+-if(${JS_RUNTIME} STREQUAL "hermes")
+-  find_package(hermes-engine REQUIRED CONFIG)
+-
+-  string(APPEND CMAKE_CXX_FLAGS " -DJS_RUNTIME_HERMES=1")
+-
+-  target_link_libraries(
+-    ${PACKAGE_NAME}
+-    hermes-engine::libhermes
+-  )
+-
+-  if(${HERMES_ENABLE_DEBUGGER})
+-    if(ReactAndroid_VERSION_MINOR GREATER_EQUAL 76)
+-      target_link_libraries(
+-        ${PACKAGE_NAME}
+-        ReactAndroid::hermestooling
+-      )
+-    else()
+-      target_link_libraries(
+-        ${PACKAGE_NAME}
+-        ReactAndroid::hermes_executor
+-      )
+-    endif()
+-  endif()
+-elseif(${JS_RUNTIME} STREQUAL "jsc")
+-  string(APPEND CMAKE_CXX_FLAGS " -DJS_RUNTIME_JSC=1")
++# Set compiler options
++target_compile_options(${MODULE_NAME} PRIVATE
++    -fexceptions
++    -frtti
++    -fPIC
++    -std=c++17
++    -Wall
++)
+ 
+-  if(ReactAndroid_VERSION_MINOR GREATER_EQUAL 76)
+-    target_link_libraries(
+-      ${PACKAGE_NAME}
+-      ReactAndroid::jsctooling
+-    )
+-  else()
+-    target_link_libraries(
+-      ${PACKAGE_NAME}
+-      ReactAndroid::jscexecutor
+-    )
+-  endif()
+-else()
+-  message(FATAL_ERROR "Unknown JS runtime ${JS_RUNTIME}.")
+-endif()
++install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX})
+\ No newline at end of file
