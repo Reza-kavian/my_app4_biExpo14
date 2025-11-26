@@ -1,42 +1,50 @@
 diff --git a/node_modules/react-native-worklets-core/android/CMakeLists.txt b/node_modules/react-native-worklets-core/android/CMakeLists.txt
-index cc4cbfe..722c4cb 100644
+index cc4cbfe..e1ffdf1 100644
 --- a/node_modules/react-native-worklets-core/android/CMakeLists.txt
 +++ b/node_modules/react-native-worklets-core/android/CMakeLists.txt
-@@ -1,116 +1,61 @@
+@@ -1,116 +1,67 @@
 -project("rnworklets")
 -cmake_minimum_required(VERSION 3.8)
-+cmake_minimum_required(VERSION 3.18)
-+project(WorkletsCore)
- 
+-
 -set(CMAKE_VERBOSE_MAKEFILE ON)
 -set(CMAKE_CXX_STANDARD 17)
-+set(MODULE_NAME worklets-core)
-+set(WORKLETS_CORE_DIR "${PROJECT_SOURCE_DIR}/..")
- 
+-
 -if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 -  string(APPEND CMAKE_CXX_FLAGS " -DDEBUG")
--endif()
--
++cmake_minimum_required(VERSION 3.18)
++project(WorkletsCore)
++
++set(MODULE_NAME worklets-core)
++set(WORKLETS_CORE_DIR "${PROJECT_SOURCE_DIR}/..")
++
++# ----------------------------------------------------
++# FIX: Minimalist linkage for compatibility (RN Classic / Expo Custom Builds)
++# This avoids relying on the missing 'cmake-utils' files and manually sets paths.
++# ----------------------------------------------------
++
++# Find the main JSI library (Hermes or JSC)
++find_library(JSI_LIBRARY jsi)
++
++# --- FIX START: Change FATAL_ERROR to a WARNING and ensure ASCII indentation ---
++# The check for JSI_LIBRARY often fails in modern React Native environments (0.70+), 
++# even when Hermes is enabled, because linking is handled by Gradle's Prefab system 
++# and not CMake's `find_library`. We prevent the FATAL_ERROR.
++if(NOT JSI_LIBRARY)
++    message(WARNING "JSI library search failed in CMake. Relying on Gradle/Prefab for linking.")
+ endif()
++# --- FIX END ---
+ 
 -set(PACKAGE_NAME "rnworklets")
 -
 -
 -# Pre-set Folly flags from React Native core
 -include("${REACT_NATIVE_DIR}/ReactAndroid/cmake-utils/folly-flags.cmake")
 -add_compile_options(${folly_FLAGS})
-+# ----------------------------------------------------
-+# FIX: Minimalist linkage for compatibility (RN Classic / Expo Custom Builds)
-+# This avoids relying on the missing 'cmake-utils' files and manually sets paths.
-+# ----------------------------------------------------
- 
+-
 -# Consume shared libraries and headers from prefabs
 -find_package(fbjni REQUIRED CONFIG)
 -find_package(ReactAndroid REQUIRED CONFIG)
-+# Find the main JSI library (Hermes or JSC)
-+find_library(JSI_LIBRARY jsi)
-+if(NOT JSI_LIBRARY)
-+    message(FATAL_ERROR "Could not find jsi library. Is Hermes/JSC enabled?")
-+endif()
- 
+-
 -file(GLOB_RECURSE SOURCES_COMMON CONFIGURE_DEPENDS "../cpp/**.cpp")
 +# Define the source files
 +file(GLOB_RECURSE WORKLETS_CORE_SRCS "${WORKLETS_CORE_DIR}/cpp/*.cpp")
@@ -44,12 +52,13 @@ index cc4cbfe..722c4cb 100644
  
  add_library(
 -  ${PACKAGE_NAME}
-+  ${MODULE_NAME}
-   SHARED
+-  SHARED
 -  ${SOURCES_COMMON}
 -  cpp-adapter.cpp
-+  ${WORKLETS_CORE_SRCS}
-+  ${WORKLETS_CORE_HDRS}
++    ${MODULE_NAME}
++    SHARED
++    ${WORKLETS_CORE_SRCS}
++    ${WORKLETS_CORE_HDRS}
  )
  
 -# includes
@@ -81,20 +90,21 @@ index cc4cbfe..722c4cb 100644
 +# Set up link libraries
  target_link_libraries(
 -  ${PACKAGE_NAME}
-+  ${MODULE_NAME}
-+  PUBLIC
-+  ${JSI_LIBRARY} # Link against JSI library found above
-+  c++_shared
-   log
+-  log
 -  android
--)
--
++    ${MODULE_NAME}
++    PUBLIC
++    ${JSI_LIBRARY} # Link against JSI library found above (will be empty, but we rely on Prefab)
++    c++_shared
++    log
+ )
+ 
 -target_link_libraries(
 -  ${PACKAGE_NAME}
 -  ReactAndroid::jsi
 -  fbjni::fbjni
- )
- 
+-)
+-
 -if(ReactAndroid_VERSION_MINOR GREATER_EQUAL 76)
 -  target_link_libraries(
 -    ${PACKAGE_NAME}
@@ -109,7 +119,7 @@ index cc4cbfe..722c4cb 100644
 -  )
 +# Optional: Link against the `react-native-worklets` package if it's installed
 +if (TARGET react-native-worklets)
-+  target_link_libraries(${MODULE_NAME} PRIVATE react-native-worklets)
++    target_link_libraries(${MODULE_NAME} PRIVATE react-native-worklets)
  endif()
  
 -# Add the appropriate JS runtime

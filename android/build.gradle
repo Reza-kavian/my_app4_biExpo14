@@ -1,10 +1,12 @@
+// این فایل پیکربندی‌های کلی ساخت پروژه اندروید را دربر دارد.
+
 buildscript {
     ext {
         buildToolsVersion = "36.0.0"
         minSdkVersion = 24
         compileSdkVersion = 36
         targetSdkVersion = 36
-        // تغییر به نسخه 26.3.11579264 (که در سیستم شما نصب است و پایدارتر است)
+        // **فیکس حیاتی:** تنظیم نسخه NDK به 26.3.11579264 برای افزایش سازگاری با ماژول‌های JSI
         ndkVersion = "26.3.11579264"    
         kotlinVersion = "2.1.20"
     }
@@ -15,8 +17,36 @@ buildscript {
     dependencies {
         classpath("com.android.tools.build:gradle:8.7.2")
         classpath("com.facebook.react:react-native-gradle-plugin")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinVersion}")
     }
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+// پیکربندی برای تمام ماژول‌ها و پروژه‌های زیرمجموعه
+allprojects {
+    repositories {
+        // مسیر نصب شده React Native در node_modules
+        maven {
+            url("$rootDir/../node_modules/react-native/android")
+        }
+        // مسیرهای اضافی برای ماژول‌هایی مانند react-native-worklets-core (اختیاری اما توصیه شده)
+        maven {
+            url("$rootDir/../node_modules/react-native-worklets-core/android/maven")
+        }
+        google()
+        mavenCentral()
+        // مخزن عمومی برای وابستگی‌های متفرقه
+        maven { url 'https://www.jitpack.io' }
+    }
+}
+
+subprojects {
+    // **فیکس خطای خط ۴۵:** جایگزینی afterEvaluate با withPlugin برای زمان‌بندی صحیح
+    project.pluginManager.withPlugin('com.android.library') {
+        // این بخش برای جلوگیری از خطاهای احتمالی در زمان بیلد کتابخانه‌هایی است که targetSdk را تنظیم نکرده‌اند.
+        // تنظیم compileSdk و buildToolsVersion برای کتابخانه‌های فرعی
+        android.compileSdkVersion = rootProject.ext.compileSdkVersion
+        android.buildToolsVersion = rootProject.ext.buildToolsVersion
+    }
+}

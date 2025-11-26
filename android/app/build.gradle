@@ -20,23 +20,18 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
-
-        // ** 👈 گام ۱: این بلوک را اضافه کنید تا معماری‌های مورد نیاز مشخص شود **
+ 
         ndk {
             abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
         }
-
-        // 🎯 تغییر اصلی: پیکربندی CMake باید درون defaultConfig انجام شود
+ 
         externalNativeBuild {
-            cmake {
-                // این متد (arguments) اکنون در اینجا قابل دسترسی است
+            cmake { 
                 arguments "-DANDROID_TOOLCHAIN=clang",
                           "-DANDROID_STL=c++_shared",
                           "-DHERMES_ENABLE_DEBUGGER=TRUE",
-                          "-DHERMES_ENABLE_BYTECODE_STRIPPING=FALSE",
-                          // --- FIX CRITICAL: Use the reliable react.reactNativeDir ---
-                          "-DREACT_NATIVE_DIR=${react.reactNativeDir}"
-                          // ----------------------------------------
+                          "-DHERMES_ENABLE_BYTECODE_STRIPPING=FALSE", 
+                          "-DREACT_NATIVE_DIR=${react.reactNativeDir}" 
             }
         }
     }
@@ -76,7 +71,6 @@ dependencies {
     }
     implementation project(':react-native-reanimated')
     implementation project(':react-native-worklets-core')
-    implementation project(':react-native-worklets')
-    // ✅ موتور اصلی بارکدخوان برای Vision Camera V4 (حیاتی)
+    implementation project(':react-native-worklets') 
     implementation 'com.google.mlkit:barcode-scanning:17.2.0'
 }
