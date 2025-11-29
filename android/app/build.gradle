@@ -20,13 +20,14 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
- 
-        ndk {
+
+        ndk {          
+            ndkVersion rootProject.ext.ndkVersion 
             abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
         }
- 
+
         externalNativeBuild {
-            cmake { 
+            cmake {
                 arguments "-DANDROID_TOOLCHAIN=clang",
                           "-DANDROID_STL=c++_shared",
                           "-DHERMES_ENABLE_DEBUGGER=TRUE",
