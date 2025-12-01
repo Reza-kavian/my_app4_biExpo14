@@ -1,16 +1,15 @@
 diff --git a/node_modules/react-native-worklets/android/CMakeLists.txt b/node_modules/react-native-worklets/android/CMakeLists.txt
-index 7008749..1488815 100644
+index 7008749..c93386e 100644
 --- a/node_modules/react-native-worklets/android/CMakeLists.txt
 +++ b/node_modules/react-native-worklets/android/CMakeLists.txt
-@@ -1,107 +1,66 @@
+@@ -1,107 +1,45 @@
 -project(Worklets)
 -cmake_minimum_required(VERSION 3.8)
-+cmake_minimum_required(VERSION 3.22) # ارتقاء به نسخه پایدارتر
-+project(ReactNativeWorklets)
++cmake_minimum_required(VERSION 3.18)
  
 -set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-+# این نام هدف (Target Name) باید 'rnworklets' باشد تا توسط worklets-core پیدا شود.
-+set(MODULE_NAME rnworklets)
++# 1. FIX: Add project command to remove the 'No project() command is present' warning.
++project(react-native-worklets)
  
 -set(CMAKE_CXX_STANDARD 20)
 -
@@ -46,38 +45,37 @@ index 7008749..1488815 100644
 -  string(APPEND CMAKE_CXX_FLAGS " -DJS_RUNTIME_JSC=1")
 -else()
 -  message(FATAL_ERROR "Unknown JS runtime ${JS_RUNTIME}.")
--endif()
--
++# 2. Dependency Path Setup
++if(NOT REACT_NATIVE_DIR)
++    message(FATAL_ERROR "REACT_NATIVE_DIR not specified")
+ endif()
+ 
 -set(BUILD_DIR "${CMAKE_SOURCE_DIR}/build")
 -set(ANDROID_CPP_DIR "${CMAKE_SOURCE_DIR}/src/main/cpp")
 -set(COMMON_CPP_DIR "${CMAKE_SOURCE_DIR}/../Common/cpp")
-+# تعریف فایل های منبع C++ برای این پکیج
-+set(RNWORKLETS_SRCS
-+    src/main/cpp/Worklets.cpp
-+)
++# Ensure absolute path calculation for robustness
++get_filename_component(REACT_NATIVE_ROOT_DIR "${REACT_NATIVE_DIR}" ABSOLUTE)
  
 -file(GLOB_RECURSE WORKLETS_COMMON_CPP_SOURCES CONFIGURE_DEPENDS
 -     "${COMMON_CPP_DIR}/worklets/*.cpp")
 -file(GLOB_RECURSE WORKLETS_ANDROID_CPP_SOURCES CONFIGURE_DEPENDS
 -     "${ANDROID_CPP_DIR}/worklets/*.cpp")
-+# 1. تعریف کتابخانه C++ با نام مورد انتظار (rnworklets)
-+add_library(
-+    ${MODULE_NAME}
-+    SHARED
-+    src/main/cpp/Worklets.cpp # به جای متغیرهای غیرقابل دسترس، فایل منبع اصلی را مستقیماً اضافه کردم
-+)
++# --- CRITICAL FIX: Add necessary paths for CMake to find React Native's configuration files ---
++list(APPEND CMAKE_MODULE_PATH "${REACT_NATIVE_ROOT_DIR}/ReactAndroid/cmake")
++# ---------------------------------------------------------------------------------------------
  
 -# Consume shared libraries and headers from prefabs
-+# 2. پیدا کردن وابستگی های React Native
-+# از آنجایی که این پکیج از React Common استفاده می کند، find_package(ReactAndroid) لازم است.
-+find_package(ReactAndroid REQUIRED)
- find_package(fbjni REQUIRED CONFIG)
+-find_package(fbjni REQUIRED CONFIG)
 -find_package(ReactAndroid REQUIRED CONFIG)
--
++# 3. Find React Native package
++find_package(ReactNative REQUIRED)
+ 
 -if(${JS_RUNTIME} STREQUAL "hermes")
 -  find_package(hermes-engine REQUIRED CONFIG)
--endif()
--
++if (NOT ReactNative_FOUND)
++    message(FATAL_ERROR "Worklets: Could not locate FindReactNative.cmake. Please check React Native installation.")
+ endif()
+ 
 -add_library(worklets SHARED ${WORKLETS_COMMON_CPP_SOURCES}
 -                            ${WORKLETS_ANDROID_CPP_SOURCES})
 -
@@ -88,10 +86,8 @@ index 7008749..1488815 100644
 -else()
 -  string(APPEND CMAKE_CXX_FLAGS
 -         " -fexceptions -frtti -std=c++${CMAKE_CXX_STANDARD} -Wall -Werror")
-+if(JS_RUNTIME STREQUAL "hermes")
-+    find_package(hermes-engine REQUIRED CONFIG)
- endif()
- 
+-endif()
+-
 -# includes
 -target_include_directories(worklets PUBLIC "${COMMON_CPP_DIR}"
 -                                           "${ANDROID_CPP_DIR}")
@@ -106,14 +102,12 @@ index 7008749..1488815 100644
 -          "${REACT_NATIVE_DIR}/ReactCommon/runtimeexecutor"
 -          "${REACT_NATIVE_DIR}/ReactCommon/jsiexecutor"
 -          "${REACT_NATIVE_DIR}/ReactCommon/react/renderer/graphics/platform/cxx"
-+# 3. تعریف مسیرهای Include
-+target_include_directories(${MODULE_NAME} PUBLIC
-+    ${PROJECT_SOURCE_DIR}/src/main/cpp
-+    "${REACTANDROID_INCLUDE_DIRS}"
-+    # اضافه کردن مسیرهای اصلی که در فایل اصلی شما بودند
-+    "${REACT_NATIVE_DIR}/ReactCommon"
-+    "${REACT_NATIVE_DIR}/ReactCommon/jsi"
-+    "${REACT_NATIVE_DIR}/ReactAndroid/src/main/jni/react/common"
++# 4. Library definition
++add_library(
++    worklets
++    SHARED
++    src/main/cpp/Worklets.cpp
++    src/main/cpp/JSI_Bindings/JsiWorklet.cpp
  )
  
 -# build shared lib
@@ -128,41 +122,95 @@ index 7008749..1488815 100644
 -  else()
 -    target_link_libraries(worklets hermes-engine::libhermes)
 -  endif()
--
++# 5. Link necessary libraries
++target_link_libraries(
++    worklets
++    reactnative
++    react_native_codegen_rncore # برای سازگاری با معماری جدید
++    jsi
++    log
++)
+ 
 -  if(${HERMES_ENABLE_DEBUGGER})
 -    string(APPEND CMAKE_CXX_FLAGS " -DHERMES_ENABLE_DEBUGGER=1")
-+# 4. لینک کردن کتابخانه ها
-+target_link_libraries(${MODULE_NAME} PRIVATE
-+    ReactAndroid::reactnative
-+    ReactAndroid::jsi
-+    fbjni::fbjni
-+    log # برای Android logging
-+    c++_shared
-+)
++target_compile_features(worklets PUBLIC cxx_std_17)
  
 -    target_link_libraries(worklets ReactAndroid::hermestooling)
 -  endif()
 -elseif(${JS_RUNTIME} STREQUAL "jsc")
 -  target_link_libraries(worklets ReactAndroid::jsctooling)
-+# 5. لینک کردن زمان اجرای جاوا اسکریپت (Hermes)
-+if(JS_RUNTIME STREQUAL "hermes")
-+    if(ReactAndroid_VERSION_MINOR GREATER_EQUAL 82)
-+        target_link_libraries(${MODULE_NAME} PRIVATE hermes-engine::hermesvm)
-+    else()
-+        target_link_libraries(${MODULE_NAME} PRIVATE hermes-engine::libhermes)
-+    endif()
- endif()
-+
-+# 6. تنظیم استانداردهای C++ و کامپایلر آپشن ها
-+set_target_properties(${MODULE_NAME} PROPERTIES
-+    CXX_STANDARD 17
-+    CXX_STANDARD_REQUIRED YES
-+)
-+target_compile_options(${MODULE_NAME} PRIVATE
-+    -fexceptions
-+    -frtti
-+    -fPIC
-+    -std=c++17
-+    -Wall
-+)
+-endif()
++install(TARGETS worklets
++    DESTINATION ${CMAKE_INSTALL_PREFIX})
 \ No newline at end of file
+diff --git a/node_modules/react-native-worklets/android/build.gradle b/node_modules/react-native-worklets/android/build.gradle
+index 58211b7..6f7fb69 100644
+--- a/node_modules/react-native-worklets/android/build.gradle
++++ b/node_modules/react-native-worklets/android/build.gradle
+@@ -4,12 +4,12 @@ import java.nio.file.Paths
+ import org.apache.tools.ant.taskdefs.condition.Os
+ 
+ def safeExtGet(prop, fallback) {
+-    rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
++    return rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
+ }
+ 
+ def safeAppExtGet(prop, fallback) {
+     def appProject = rootProject.allprojects.find { it.plugins.hasPlugin('com.android.application') }
+-    appProject?.ext?.has(prop) ? appProject.ext.get(prop) : fallback
++    return appProject?.ext?.has(prop) ? appProject.ext.get(prop) : fallback
+ }
+ 
+ def isNewArchitectureEnabled() {
+@@ -43,6 +43,7 @@ def resolveReactNativeDirectory() {
+ }
+ 
+ def getReactNativeVersion() {
++    // از تابع resolveReactNativeDirectory برای یافتن مسیر استفاده می کنیم (به دلیل نیاز تابع).
+     def reactNativeRootDir = resolveReactNativeDirectory()
+     def reactProperties = new Properties()
+     file("$reactNativeRootDir/ReactAndroid/gradle.properties").withInputStream { reactProperties.load(it) }
+@@ -94,6 +95,8 @@ if (isNewArchitectureEnabled()) {
+ }
+ 
+ def packageDir = project.projectDir.parentFile
++// FIX: مسیر اصلی React Native را با استفاده از تابع داخلی resolveReactNativeDirectory() پیدا می‌کنیم.
++// این خط جایگزین عبارت project(':react-native').projectDir.parentFile شده است که در خط 99 دچار خطا می‌شد.
+ def reactNativeRootDir = resolveReactNativeDirectory()
+ def REACT_NATIVE_MINOR_VERSION = getReactNativeMinorVersion()
+ def REACT_NATIVE_VERSION = getReactNativeVersion()
+@@ -190,6 +193,7 @@ android {
+                 arguments "-DANDROID_STL=c++_shared",
+                         "-DREACT_NATIVE_MINOR_VERSION=${REACT_NATIVE_MINOR_VERSION}",
+                         "-DANDROID_TOOLCHAIN=clang",
++                        // استفاده از متغیر reactNativeRootDir که اکنون از resolveReactNativeDirectory() مقدار می‌گیرد.
+                         "-DREACT_NATIVE_DIR=${toPlatformFileString(reactNativeRootDir.path)}",
+                         "-DJS_RUNTIME=${JS_RUNTIME}",
+                         "-DIS_REANIMATED_EXAMPLE_APP=${IS_REANIMATED_EXAMPLE_APP}",
+@@ -239,16 +243,16 @@ android {
+         // only the ones that make the build fail (ideally we should only include libreanimated but we
+         // are only allowed to specify exclude patterns)
+         excludes = [
+-                "META-INF",
+-                "META-INF/**",
+-                "**/libc++_shared.so",
+-                "**/libfbjni.so",
+-                "**/libjsi.so",
+-                "**/libhermes.so",
+-                "**/libhermesvm.so",
+-                "**/libhermestooling.so",
+-                "**/libreactnative.so",
+-                "**/libjscexecutor.so",
++            "META-INF",
++            "META-INF/**",
++            "**/libc++_shared.so",
++            "**/libfbjni.so",
++            "**/libjsi.so",
++            "**/libhermes.so",
++            "**/libhermesvm.so",
++            "**/libhermestooling.so",
++            "**/libreactnative.so",
++            "**/libjscexecutor.so",
+         ]
+     }
+     compileOptions {

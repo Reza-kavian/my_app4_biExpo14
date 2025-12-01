@@ -2,12 +2,13 @@
 
 buildscript {
     ext {
+        // تنظیمات بیلد شما
         buildToolsVersion = "36.0.0"
         minSdkVersion = 24
         compileSdkVersion = 36
         targetSdkVersion = 36
-        // **فیکس NDK:** تنظیم نسخه NDK به 26.3.11579264
-        ndkVersion = "26.3.11579264"    
+        // فیکس NDK: تنظیم نسخه NDK
+        ndkVersion = "26.3.11579264" 
         kotlinVersion = "2.1.20"
     }
     repositories {
@@ -29,7 +30,7 @@ allprojects {
         maven {
             url("$rootDir/../node_modules/react-native/android")
         }
-        // مسیرهای اضافی برای ماژول‌هایی مانند react-native-worklets-core (اختیاری اما توصیه شده)
+        // مسیرهای اضافی برای ماژول‌هایی مانند react-native-worklets-core
         maven {
             url("$rootDir/../node_modules/react-native-worklets-core/android/maven")
         }
@@ -40,17 +41,35 @@ allprojects {
     }
 }
 
-// ✅ FIX نهایی: تنظیم NDK Version در سطح آبجکت android برای جلوگیری از خطاهای قبلی (afterEvaluate، ndkVersion، setNdkVersion)
-// در این روش، NDK Version مستقیماً برای تمامی پروژه های فرعی اعمال می شود.
+// ✅ FIX نهایی: تنظیم NDK و SDK و همچنین فیکس CMake.
 subprojects {
     if (project.hasProperty('android')) {
         project.android {
+            // تنظیمات عمومی SDK
             compileSdkVersion rootProject.ext.compileSdkVersion
             buildToolsVersion rootProject.ext.buildToolsVersion
             
-            // **اجبار NDKVersion به صورت مستقیم در بلوک android:**
-            // این قوی‌ترین و پایدارترین روش در نسخه‌های مدرن گریدل است.
+            // اجبار NDKVersion به صورت مستقیم
             ndkVersion rootProject.ext.ndkVersion 
+            
+            // === فیکس خطای CMake (find_package("ReactNative")) ===
+            if (project.name.contains('worklets') || project.name.contains('vision-camera') || project.name.contains('reanimated')) {
+                 defaultConfig {
+                     externalNativeBuild {
+                         cmake {
+                             // با استفاده از `rootDir` که برای کل پروژه تعریف شده، مسیردهی را انجام می‌دهیم.
+                             arguments(
+                                 // 1. مسیردهی به دایرکتوری اصلی React Native
+                                 "-DREACT_NATIVE_DIR=${rootDir}/../node_modules/react-native",
+                                 
+                                 // 2. مسیردهی به محل فایل‌های CMake Configuration داخل React Native (راه حل نهایی)
+                                 "-DCMAKE_MODULE_PATH=${rootDir}/../node_modules/react-native/ReactAndroid/cmake"
+                             )
+                         }
+                     }
+                 }
+            }
+            // === پایان فیکس CMake ===
         }
     }
 }
